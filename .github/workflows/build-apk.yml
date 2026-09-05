@@ -53,17 +53,20 @@ jobs:
           fi
           echo "NDK OK: ${ANDROID_NDK_HOME}"
 
-      - name: Build libretro core for all target ABIs
+            - name: Build libretro core for all target ABIs
         working-directory: snes9x2010
         run: |
           set -euo pipefail
+          CORE_ROOT="$(pwd)"
           for ABI in ${ABIS}; do
             echo "== Building core for ${ABI} =="
             "${ANDROID_NDK_HOME}/ndk-build" \
+              NDK_PROJECT_PATH="${CORE_ROOT}" \
+              APP_BUILD_SCRIPT="${CORE_ROOT}/jni/Android.mk" \
               APP_ABI=${ABI} \
               APP_PLATFORM=android-24 \
-              NDK_LIBS_OUT=./libs \
-              NDK_OUT=./obj
+              NDK_LIBS_OUT="${CORE_ROOT}/libs" \
+              NDK_OUT="${CORE_ROOT}/obj"
             if [ ! -f "./libs/${ABI}/libretro.so" ]; then
               echo "::error::Core build for ${ABI} did not produce libs/${ABI}/libretro.so"
               exit 1
