@@ -33,6 +33,27 @@ tramite Storage Access Framework e copiata solo nella sandbox privata dell'app
 5. Apri l'app, tocca "Carica ROM", seleziona il file della tua ROM (`.smc`/`.sfc`,
    anche dentro uno `.zip` se il core lo supporta) dal file picker di Android.
 
+## Includere la ROM direttamente nell'APK (opzionale)
+
+Di default l'app mostra un pulsante "Carica ROM" e la ROM resta fuori dal repo/APK.
+Se invece vuoi un APK già pronto con la tua ROM dentro (comodo per uso personale,
+un solo file da installare), puoi bundlarla a build time:
+
+1. **Rendi il repository privato** (Settings → Danger Zone → Change visibility →
+   Private) prima di fare qualunque commit della ROM. Un repo pubblico rende il file
+   scaricabile da chiunque abbia il link: questo sì sarebbe distribuzione pubblica di
+   materiale protetto da copyright, a differenza del caricarla in locale sul tuo
+   telefono, che è uso personale di una copia posseduta.
+2. Se la tua ROM è dentro uno `.zip`, estrai il file `.smc`/`.sfc` vero e proprio
+   (il core legge i byte grezzi della ROM, non l'archivio zip).
+3. Copia/rinomina quel file in `app/src/main/assets/rom/game.rom` nel repo.
+4. Fai commit e push (il repo dev'essere già privato a questo punto).
+5. Rilancia la Action: l'app rileverà automaticamente la ROM negli assets e la
+   caricherà all'avvio, senza mostrare il pulsante "Carica ROM".
+
+Se in futuro vuoi tornare al file picker (es. per condividere il codice senza la
+ROM), basta rimuovere `app/src/main/assets/rom/game.rom` e ricompilare.
+
 ## Salvataggi
 
 - **Save automatico (SRAM)**: la SRAM della cartuccia (il vero "save di gioco") viene

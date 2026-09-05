@@ -138,6 +138,13 @@ typedef size_t  (*retro_get_memory_size_t)(unsigned id);
 
 static void *g_core_handle = NULL;
 
+// The core (snes9x2010) does NOT copy the ROM into its own memory: it keeps
+// a direct pointer into the buffer we pass it (S9xSetStreamBuffer). So this
+// buffer must stay allocated for as long as a game is loaded, and is only
+// freed on unload/teardown - never right after retro_load_game() returns.
+static void *g_rom_buffer = NULL;
+static size_t g_rom_size = 0;
+
 static retro_set_environment_t          core_set_environment;
 static retro_set_video_refresh_tf       core_set_video_refresh;
 static retro_set_audio_sample_tf        core_set_audio_sample;
@@ -381,10 +388,50 @@ Java_com_ct3_emu_RetroCore_nativeLoadGame(JNIEnv *env, jobject thiz, jstring rom
     (void)thiz;
     const char *path = (*env)->GetStringUTFChars(env, romPath, NULL);
 
+    // snes9x2010 has need_fullpath == false: it wants the raw ROM bytes via
+    // info.data/info.size (and keeps a direct pointer into them - it does
+    // NOT copy), rather than reading the file itself from info.path.
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        LOGE("Could not open ROM file: %s", path);
+        (*env)->ReleaseStringUTFChars(env, romPath, path);
+        return JNI_FALSE;
+    }
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (size <= 0) {
+        LOGE("ROM file is empty or unreadable: %s", path);
+        fclose(f);
+        (*env)->ReleaseStringUTFChars(env, romPath, path);
+        return JNI_FALSE;
+    }
+
+    free(g_rom_buffer); // drop any previously loaded ROM's buffer
+    g_rom_buffer = malloc((size_t)size);
+    g_rom_size = 0;
+    if (!g_rom_buffer) {
+        LOGE("Out of memory reading ROM (%ld bytes)", size);
+        fclose(f);
+        (*env)->ReleaseStringUTFChars(env, romPath, path);
+        return JNI_FALSE;
+    }
+
+    size_t read = fread(g_rom_buffer, 1, (size_t)size, f);
+    fclose(f);
+    if (read != (size_t)size) {
+        LOGE("Short read on ROM file: got %zu of %ld bytes", read, size);
+        free(g_rom_buffer);
+        g_rom_buffer = NULL;
+        (*env)->ReleaseStringUTFChars(env, romPath, path);
+        return JNI_FALSE;
+    }
+    g_rom_size = (size_t)size;
+
     struct retro_game_info info;
-    info.path = path;
-    info.data = NULL;
-    info.size = 0;
+    info.path = path;          // kept for companion-file lookups (e.g. MSU1)
+    info.data = g_rom_buffer;
+    info.size = g_rom_size;
     info.meta = NULL;
 
     bool ok = core_load_game(&info);
@@ -396,8 +443,8 @@ Java_com_ct3_emu_RetroCore_nativeLoadGame(JNIEnv *env, jobject thiz, jstring rom
         g_fps = av.timing.fps > 0 ? av.timing.fps : 60.0;
         g_sample_rate = av.timing.sample_rate > 0 ? av.timing.sample_rate : 32000.0;
         core_set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
-        LOGI("Game loaded: %ux%u @ %.2f fps, sample_rate=%.0f",
-             av.geometry.base_width, av.geometry.base_height, g_fps, g_sample_rate);
+        LOGI("Game loaded: %ux%u @ %.2f fps, sample_rate=%.0f, rom=%zu bytes",
+             av.geometry.base_width, av.geometry.base_height, g_fps, g_sample_rate, g_rom_size);
     } else {
         LOGE("retro_load_game failed for %s", path);
     }
@@ -605,4 +652,7 @@ Java_com_ct3_emu_RetroCore_nativeUnload(JNIEnv *env, jobject thiz) {
     }
     free(g_argb_frame);
     g_argb_frame = NULL;
+    free(g_rom_buffer);
+    g_rom_buffer = NULL;
+    g_rom_size = 0;
 }

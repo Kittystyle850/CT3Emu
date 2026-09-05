@@ -65,6 +65,23 @@ class EmulatorActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnLoadRom).setOnClickListener {
             pickRom.launch(arrayOf("*/*"))
         }
+
+        // If a ROM was bundled into the APK at build time (assets/rom/game.rom),
+        // load it automatically and skip the file picker entirely.
+        val bundledRomAssetPath = "rom/game.rom"
+        val hasBundledRom = try {
+            assets.open(bundledRomAssetPath).use { true }
+        } catch (_: Exception) {
+            false
+        }
+        if (hasBundledRom) {
+            findViewById<View>(R.id.btnLoadRom).visibility = View.GONE
+            val romFile = File(filesDir, "current_rom.bin")
+            assets.open(bundledRomAssetPath).use { input ->
+                FileOutputStream(romFile).use { output -> input.copyTo(output) }
+            }
+            loadAndStart(romFile)
+        }
     }
 
     private fun onRomPicked(uri: Uri) {
