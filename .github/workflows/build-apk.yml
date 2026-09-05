@@ -5,6 +5,12 @@ on:
     branches: [ main ]
   workflow_dispatch: {}
 
+# If you push twice quickly, cancel the older run instead of wasting minutes
+# building an APK you're about to replace anyway.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NDK_VERSION: "26.1.10909125"
   ABIS: "armeabi-v7a arm64-v8a x86_64"
@@ -53,13 +59,24 @@ jobs:
           fi
           echo "NDK OK: ${ANDROID_NDK_HOME}"
 
-            - name: Build libretro core for all target ABIs
+      - name: Build libretro core for all target ABIs
         working-directory: snes9x2010
         run: |
           set -euo pipefail
           CORE_ROOT="$(pwd)"
           for ABI in ${ABIS}; do
             echo "== Building core for ${ABI} =="
+            # NDK_PROJECT_PATH and APP_BUILD_SCRIPT must be ABSOLUTE here.
+            # This core's Android.mk computes LOCAL_PATH via $(call my-dir),
+            # then builds source paths as $(LOCAL_PATH)/../src/foo.c. If
+            # ndk-build is invoked with a relative project path, LOCAL_PATH
+            # stays relative too, and ndk-build's internal logic (which only
+            # skips re-prepending LOCAL_PATH for already-absolute source
+            # paths) ends up prepending it a second time, producing bogus
+            # doubled targets like "jni/jni/../src/apu.c". Absolute paths
+            # make every source path already-absolute, so it's never
+            # re-prepended. (Verified by reproducing the exact failure with
+            # a minimal GNU Make script before landing this fix.)
             "${ANDROID_NDK_HOME}/ndk-build" \
               NDK_PROJECT_PATH="${CORE_ROOT}" \
               APP_BUILD_SCRIPT="${CORE_ROOT}/jni/Android.mk" \
@@ -92,6 +109,7 @@ jobs:
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Verify APK was produced
+        id: verify_apk
         run: |
           set -euo pipefail
           APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -n1)
@@ -99,7 +117,25 @@ jobs:
             echo "::error::No APK found in app/build/outputs/apk/debug - build silently produced nothing."
             exit 1
           fi
-          echo "Built: ${APK} ($(du -h "${APK}" | cut -f1))"
+          SIZE=$(du -h "${APK}" | cut -f1)
+          echo "Built: ${APK} (${SIZE})"
+          echo "apk_path=${APK}" >> "$GITHUB_OUTPUT"
+          echo "apk_size=${SIZE}" >> "$GITHUB_OUTPUT"
+
+      - name: Write build summary
+        run: |
+          {
+            echo "### CT3Emu build succeeded ✅"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| APK | \`${{ steps.verify_apk.outputs.apk_path }}\` |"
+            echo "| Size | ${{ steps.verify_apk.outputs.apk_size }} |"
+            echo "| ABIs | ${ABIS} |"
+            echo "| NDK | ${NDK_VERSION} |"
+            echo ""
+            echo "Download it from the **Artifacts** section of this run."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
