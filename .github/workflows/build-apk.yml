@@ -1,0 +1,109 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+env:
+  NDK_VERSION: "26.1.10909125"
+  ABIS: "armeabi-v7a arm64-v8a x86_64"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Checkout snes9x2010 libretro core
+        uses: actions/checkout@v4
+        with:
+          repository: libretro/snes9x2010
+          path: snes9x2010
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK (cmdline-tools, platform, build-tools)
+        uses: android-actions/setup-android@v3
+
+      # Belt-and-braces: accept licenses explicitly even though the action
+      # above normally does it, so a future action-version change can't
+      # silently break the build on a license prompt.
+      - name: Accept all SDK licenses
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Install NDK + CMake + platform via sdkmanager
+        run: |
+          set -euo pipefail
+          sdkmanager --install "ndk;${NDK_VERSION}" "cmake;3.22.1" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Verify NDK install
+        run: |
+          set -euo pipefail
+          if [ ! -x "${ANDROID_NDK_HOME}/ndk-build" ]; then
+            echo "::error::ndk-build not found at ${ANDROID_NDK_HOME} - NDK install failed or version ${NDK_VERSION} was renamed/removed upstream."
+            exit 1
+          fi
+          echo "NDK OK: ${ANDROID_NDK_HOME}"
+
+      - name: Build libretro core for all target ABIs
+        working-directory: snes9x2010
+        run: |
+          set -euo pipefail
+          for ABI in ${ABIS}; do
+            echo "== Building core for ${ABI} =="
+            "${ANDROID_NDK_HOME}/ndk-build" \
+              -C . \
+              NDK_PROJECT_PATH=. \
+              APP_BUILD_SCRIPT=./jni/Android.mk \
+              APP_PLATFORM=android-24 \
+              APP_ABI=${ABI} \
+              NDK_LIBS_OUT=./libs \
+              NDK_OUT=./obj
+            if [ ! -f "./libs/${ABI}/libretro.so" ]; then
+              echo "::error::Core build for ${ABI} did not produce libs/${ABI}/libretro.so"
+              exit 1
+            fi
+          done
+
+      - name: Stage core .so files into app assets
+        run: |
+          set -euo pipefail
+          for ABI in ${ABIS}; do
+            mkdir -p "app/src/main/assets/cores/${ABI}"
+            cp "snes9x2010/libs/${ABI}/libretro.so" "app/src/main/assets/cores/${ABI}/libretro.so"
+          done
+          echo "Staged core binaries:"
+          find app/src/main/assets/cores -type f -exec ls -lh {} \;
+
+      - name: Set up Gradle (with dependency + build cache)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Verify APK was produced
+        run: |
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -n1)
+          if [ -z "${APK}" ]; then
+            echo "::error::No APK found in app/build/outputs/apk/debug - build silently produced nothing."
+            exit 1
+          fi
+          echo "Built: ${APK} ($(du -h "${APK}" | cut -f1))"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CT3Emu-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
