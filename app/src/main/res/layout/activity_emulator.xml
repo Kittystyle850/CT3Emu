@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <SurfaceView
+        android:id="@+id/surfaceView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <Button
+        android:id="@+id/btnLoadRom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Carica ROM" />
+
+    <!-- ============ D-Pad, bottom-left ============
+         Tight cross layout (small gaps) so a thumb rolling between two
+         adjacent buttons can still get diagonal movement, important for
+         dribbling at an angle in a soccer game. -->
+    <Button android:id="@+id/btnUp"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|left"
+        android:layout_marginStart="88dp" android:layout_marginBottom="148dp"
+        android:background="@drawable/pad_button_dpad"
+        android:text="▲" android:textColor="#FFFFFF" android:elevation="0dp" />
+    <Button android:id="@+id/btnDown"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|left"
+        android:layout_marginStart="88dp" android:layout_marginBottom="20dp"
+        android:background="@drawable/pad_button_dpad"
+        android:text="▼" android:textColor="#FFFFFF" />
+    <Button android:id="@+id/btnLeft"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|left"
+        android:layout_marginStart="20dp" android:layout_marginBottom="84dp"
+        android:background="@drawable/pad_button_dpad"
+        android:text="◀" android:textColor="#FFFFFF" />
+    <Button android:id="@+id/btnRight"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|left"
+        android:layout_marginStart="156dp" android:layout_marginBottom="84dp"
+        android:background="@drawable/pad_button_dpad"
+        android:text="▶" android:textColor="#FFFFFF" />
+
+    <!-- ============ Face buttons, bottom-right ============
+         Standard SNES diamond (Y-left, X-top, B-bottom, A-right), enlarged
+         and well spaced since these carry pass/shoot/tackle actions. -->
+    <Button android:id="@+id/btnX"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|right"
+        android:layout_marginEnd="88dp" android:layout_marginBottom="148dp"
+        android:background="@drawable/pad_button_action"
+        android:text="X" android:textColor="#FFFFFF" android:textStyle="bold" />
+    <Button android:id="@+id/btnB"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|right"
+        android:layout_marginEnd="88dp" android:layout_marginBottom="20dp"
+        android:background="@drawable/pad_button_action"
+        android:text="B" android:textColor="#FFFFFF" android:textStyle="bold" />
+    <Button android:id="@+id/btnY"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|right"
+        android:layout_marginEnd="156dp" android:layout_marginBottom="84dp"
+        android:background="@drawable/pad_button_action"
+        android:text="Y" android:textColor="#FFFFFF" android:textStyle="bold" />
+    <Button android:id="@+id/btnA"
+        android:layout_width="64dp" android:layout_height="64dp"
+        android:layout_gravity="bottom|right"
+        android:layout_marginEnd="20dp" android:layout_marginBottom="84dp"
+        android:background="@drawable/pad_button_action"
+        android:text="A" android:textColor="#FFFFFF" android:textStyle="bold" />
+
+    <!-- ============ Shoulder buttons, top corners ============
+         Wide targets near the top edge for index-finger reach while
+         holding the phone in landscape. -->
+    <Button android:id="@+id/btnL"
+        android:layout_width="88dp" android:layout_height="48dp"
+        android:layout_gravity="top|left" android:layout_margin="10dp"
+        android:background="@drawable/pad_button_system"
+        android:text="L" android:textColor="#FFFFFF" />
+    <Button android:id="@+id/btnR"
+        android:layout_width="88dp" android:layout_height="48dp"
+        android:layout_gravity="top|right" android:layout_margin="10dp"
+        android:background="@drawable/pad_button_system"
+        android:text="R" android:textColor="#FFFFFF" />
+
+    <!-- Quick save/load, tucked just below L/R so they're reachable but
+         never in the path of normal shoulder-button presses. -->
+    <Button android:id="@+id/btnQuickSave"
+        android:layout_width="72dp" android:layout_height="36dp"
+        android:layout_gravity="top|left" android:layout_marginStart="14dp" android:layout_marginTop="64dp"
+        android:background="@drawable/pad_button_system"
+        android:text="SALVA" android:textSize="9sp" android:textColor="#FFFFFF" />
+    <Button android:id="@+id/btnQuickLoad"
+        android:layout_width="72dp" android:layout_height="36dp"
+        android:layout_gravity="top|right" android:layout_marginEnd="14dp" android:layout_marginTop="64dp"
+        android:background="@drawable/pad_button_system"
+        android:text="CARICA" android:textSize="9sp" android:textColor="#FFFFFF" />
+
+    <!-- Start/Select, top-center -->
+    <Button android:id="@+id/btnSelect"
+        android:layout_width="84dp" android:layout_height="36dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="10dp" android:layout_marginEnd="90dp"
+        android:background="@drawable/pad_button_system"
+        android:text="SELECT" android:textSize="10sp" android:textColor="#FFFFFF" />
+    <Button android:id="@+id/btnStart"
+        android:layout_width="84dp" android:layout_height="36dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="10dp" android:layout_marginStart="90dp"
+        android:background="@drawable/pad_button_system"
+        android:text="START" android:textSize="10sp" android:textColor="#FFFFFF" />
+
+</FrameLayout>
