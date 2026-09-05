@@ -60,11 +60,8 @@ jobs:
           for ABI in ${ABIS}; do
             echo "== Building core for ${ABI} =="
             "${ANDROID_NDK_HOME}/ndk-build" \
-              -C . \
-              NDK_PROJECT_PATH=. \
-              APP_BUILD_SCRIPT=./jni/Android.mk \
-              APP_PLATFORM=android-24 \
               APP_ABI=${ABI} \
+              APP_PLATFORM=android-24 \
               NDK_LIBS_OUT=./libs \
               NDK_OUT=./obj
             if [ ! -f "./libs/${ABI}/libretro.so" ]; then
