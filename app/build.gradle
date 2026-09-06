@@ -1,61 +1,60 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
-    namespace = "com.ct3.emu"
-    compileSdk = 34
+    namespace 'com.ct3.emu'
+    compileSdk 34
     // Pinned so the Gradle-driven build of retro_shim.so uses the exact
     // same NDK toolchain the CI workflow uses to build the libretro core.
-    ndkVersion = "26.1.10909125"
+    ndkVersion '26.1.10909125'
 
     defaultConfig {
-        applicationId = "com.ct3.emu"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        applicationId 'com.ct3.emu'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
 
         ndk {
             // Match the ABIs the libretro core is built for in CI.
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
         }
 
         externalNativeBuild {
             cmake {
-                cppFlags += ""
-                arguments += listOf("-DANDROID_STL=c++_shared")
+                arguments '-DANDROID_STL=c++_shared'
             }
         }
     }
 
     externalNativeBuild {
         cmake {
-            path = file("src/main/jni/CMakeLists.txt")
-            version = "3.22.1"
+            path file('src/main/jni/CMakeLists.txt')
+            version '3.22.1'
         }
     }
 
     // The prebuilt libretro core .so files land here (per-ABI) before packaging.
     sourceSets {
-        getByName("main") {
-            jniLibs.srcDirs("src/main/jniLibs")
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            minifyEnabled false
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = '17'
     }
 
     packaging {
@@ -66,7 +65,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
 }
