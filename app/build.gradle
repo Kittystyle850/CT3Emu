@@ -69,3 +69,12 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.documentfile:documentfile:1.0.1'
 }
+
+// Renames the generated APK file itself (what you see after downloading
+// the CI artifact / installing it), independent of the app's display
+// name (android:label) and package id (applicationId).
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+        outputFileName = "Captain Tsubasa III - Koutei no Chousen ITA.apk"
+    }
+}
