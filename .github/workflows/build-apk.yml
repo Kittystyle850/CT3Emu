@@ -104,6 +104,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+          # Pinned to match AGP 8.5.2's supported range. Without this,
+          # setup-gradle installs whatever the latest Gradle release is
+          # (it grabbed 9.7.1 once), which AGP 8.5.2 does not support and
+          # fails with unrelated-looking Groovy/DSL errors.
+          gradle-version: '8.7'
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
