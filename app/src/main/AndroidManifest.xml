@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- The bundled page tries a version-check fetch to an external CDN
+         (harmless if it fails - we run with nobundle regardless), and
+         WebView can behave oddly on some requests without this permission
+         even for otherwise-local content. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="false"
         android:label="Captain Tsubasa III - Koutei no Chousen ITA"
