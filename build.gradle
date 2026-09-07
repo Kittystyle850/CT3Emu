@@ -5,7 +5,11 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.5.2'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24'
+        // Bumped from 1.9.24: androidx.webkit:1.16.0 pulls in kotlin-stdlib
+        // 2.1.20 transitively, which the 1.9.x compiler can't read
+        // ("Incompatible classes... binary version 2.1.0, expected 1.9.0").
+        // Using the matching 2.1.20 Kotlin plugin avoids the mismatch.
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20'
     }
 }
 
