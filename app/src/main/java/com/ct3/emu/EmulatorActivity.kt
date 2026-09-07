@@ -2,6 +2,7 @@ package com.ct3.emu
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Rect
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -9,11 +10,14 @@ import android.media.AudioTrack
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.widget.Button
+import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -55,41 +59,72 @@ class EmulatorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_emulator)
 
-        surfaceView = findViewById(R.id.surfaceView)
-        sramFile = File(filesDir, "save/game.srm")
-        quickSaveFile = File(filesDir, "save/quicksave.state")
+        // Any failure below (missing native lib, bad ROM, JNI mismatch...)
+        // gets shown on screen instead of silently crashing the app. If you
+        // hit this screen, screenshot/copy the text - it tells us exactly
+        // what went wrong instead of us having to guess.
+        try {
+            surfaceView = findViewById(R.id.surfaceView)
+            sramFile = File(filesDir, "save/game.srm")
+            quickSaveFile = File(filesDir, "save/quicksave.state")
 
-        setupGamepad()
-        setupMenuButtons()
+            setupGamepad()
+            setupMenuButtons()
 
-        findViewById<Button>(R.id.btnLoadRom).setOnClickListener {
-            pickRom.launch(arrayOf("*/*"))
-        }
-
-        // If a ROM was bundled into the APK at build time (assets/rom/game.rom),
-        // load it automatically and skip the file picker entirely.
-        val bundledRomAssetPath = "rom/game.rom"
-        val hasBundledRom = try {
-            assets.open(bundledRomAssetPath).use { true }
-        } catch (_: Exception) {
-            false
-        }
-        if (hasBundledRom) {
-            findViewById<View>(R.id.btnLoadRom).visibility = View.GONE
-            val romFile = File(filesDir, "current_rom.bin")
-            assets.open(bundledRomAssetPath).use { input ->
-                FileOutputStream(romFile).use { output -> input.copyTo(output) }
+            findViewById<Button>(R.id.btnLoadRom).setOnClickListener {
+                pickRom.launch(arrayOf("*/*"))
             }
-            loadAndStart(romFile)
+
+            // If a ROM was bundled into the APK at build time (assets/rom/game.rom),
+            // load it automatically and skip the file picker entirely.
+            val bundledRomAssetPath = "rom/game.rom"
+            val hasBundledRom = try {
+                assets.open(bundledRomAssetPath).use { true }
+            } catch (_: Exception) {
+                false
+            }
+            if (hasBundledRom) {
+                findViewById<View>(R.id.btnLoadRom).visibility = View.GONE
+                val romFile = File(filesDir, "current_rom.bin")
+                assets.open(bundledRomAssetPath).use { input ->
+                    FileOutputStream(romFile).use { output -> input.copyTo(output) }
+                }
+                loadAndStart(romFile)
+            }
+        } catch (t: Throwable) {
+            showFatalError("onCreate", t)
+        }
+    }
+
+    /** Replaces the whole screen with the error text instead of letting the
+     *  app crash. Also logged to Logcat under tag EmulatorActivity. */
+    private fun showFatalError(where: String, t: Throwable) {
+        running = false
+        Log.e("EmulatorActivity", "Fatal error in $where", t)
+        val message = "Errore in $where:\n\n${Log.getStackTraceString(t)}"
+        runOnUiThread {
+            val textView = TextView(this).apply {
+                text = message
+                setTextColor(Color.WHITE)
+                setBackgroundColor(Color.BLACK)
+                textSize = 12f
+                setPadding(32, 32, 32, 32)
+                setTextIsSelectable(true)
+            }
+            setContentView(ScrollView(this).apply { addView(textView) })
         }
     }
 
     private fun onRomPicked(uri: Uri) {
-        val romFile = File(filesDir, "current_rom.bin")
-        contentResolver.openInputStream(uri)?.use { input ->
-            FileOutputStream(romFile).use { output -> input.copyTo(output) }
+        try {
+            val romFile = File(filesDir, "current_rom.bin")
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(romFile).use { output -> input.copyTo(output) }
+            }
+            loadAndStart(romFile)
+        } catch (t: Throwable) {
+            showFatalError("onRomPicked", t)
         }
-        loadAndStart(romFile)
     }
 
     private fun loadAndStart(romFile: File) {
@@ -137,38 +172,42 @@ class EmulatorActivity : AppCompatActivity() {
         val frameIntervalNanos = (1_000_000_000.0 / fps).toLong()
 
         emuThread = thread(start = true, name = "EmuThread") {
-            val outDims = IntArray(2)
-            val audioBuf = ShortArray(4096)
+            try {
+                val outDims = IntArray(2)
+                val audioBuf = ShortArray(4096)
 
-            var nextFrameTime = System.nanoTime()
-            while (running) {
-                RetroCore.nativeRunFrame()
+                var nextFrameTime = System.nanoTime()
+                while (running) {
+                    RetroCore.nativeRunFrame()
 
-                RetroCore.nativeGetFrame(outDims)?.let { pixels ->
-                    renderFrame(pixels, outDims[0], outDims[1])
-                }
-
-                val framesWritten = RetroCore.nativeGetAudio(audioBuf)
-                if (framesWritten > 0) {
-                    audioTrack?.write(audioBuf, 0, framesWritten * 2)
-                }
-
-                framesSinceAutosave++
-                if (framesSinceAutosave >= autosaveIntervalFrames) {
-                    framesSinceAutosave = 0
-                    RetroCore.nativeSaveSram(sramFile.absolutePath)
-                }
-
-                nextFrameTime += frameIntervalNanos
-                val sleepNanos = nextFrameTime - System.nanoTime()
-                if (sleepNanos > 0) {
-                    try {
-                        Thread.sleep(sleepNanos / 1_000_000, (sleepNanos % 1_000_000).toInt())
-                    } catch (_: InterruptedException) {
+                    RetroCore.nativeGetFrame(outDims)?.let { pixels ->
+                        renderFrame(pixels, outDims[0], outDims[1])
                     }
-                } else {
-                    nextFrameTime = System.nanoTime() // fell behind, resync
+
+                    val framesWritten = RetroCore.nativeGetAudio(audioBuf)
+                    if (framesWritten > 0) {
+                        audioTrack?.write(audioBuf, 0, framesWritten * 2)
+                    }
+
+                    framesSinceAutosave++
+                    if (framesSinceAutosave >= autosaveIntervalFrames) {
+                        framesSinceAutosave = 0
+                        RetroCore.nativeSaveSram(sramFile.absolutePath)
+                    }
+
+                    nextFrameTime += frameIntervalNanos
+                    val sleepNanos = nextFrameTime - System.nanoTime()
+                    if (sleepNanos > 0) {
+                        try {
+                            Thread.sleep(sleepNanos / 1_000_000, (sleepNanos % 1_000_000).toInt())
+                        } catch (_: InterruptedException) {
+                        }
+                    } else {
+                        nextFrameTime = System.nanoTime() // fell behind, resync
+                    }
                 }
+            } catch (t: Throwable) {
+                showFatalError("EmuThread", t)
             }
         }
     }
@@ -251,7 +290,7 @@ class EmulatorActivity : AppCompatActivity() {
             R.id.btnL to RetroCore.BUTTON_L,
             R.id.btnR to RetroCore.BUTTON_R,
             R.id.btnStart to RetroCore.BUTTON_START,
-            R.id.btnSelect to RetroCore.BUTTON_SELECT,
+            R.id.btnSelect to RetroCore.BUTTON_SELECT
         ).forEach { (viewId, buttonId) ->
             findViewById<View>(viewId).setOnTouchListener { _, event ->
                 when (event.action) {
