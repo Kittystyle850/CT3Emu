@@ -1,13 +1,18 @@
 package com.ct3.emu
 
 import android.annotation.SuppressLint
+import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
@@ -26,19 +31,42 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        webView = findViewById(R.id.webView)
-        setupWebView()
-        setupGamepad()
+        // Any failure here (WebView init, missing view, bad URL...) is shown
+        // on screen instead of silently crashing. If you land on this
+        // screen, screenshot the text - it tells us exactly what broke.
+        try {
+            webView = findViewById(R.id.webView)
+            setupWebView()
+            setupGamepad()
 
-        // core/rom are pre-selected so webretro skips its own picker UI and
-        // boots straight into the game. nobundle skips its CDN asset fetch
-        // (shader presets etc.) since we're fully offline. forcestartbutton
-        // shows a tappable Start overlay, which also satisfies the browser's
-        // "must start audio from a user gesture" requirement.
-        webView.loadUrl(
-            "https://appassets.androidplatform.net/assets/webretro/index.html" +
-                "?core=snes9x&rom=game.sfc&nobundle&forcestartbutton"
-        )
+            // core/rom are pre-selected so webretro skips its own picker UI and
+            // boots straight into the game. nobundle skips its CDN asset fetch
+            // (shader presets etc.) since we're fully offline. forcestartbutton
+            // shows a tappable Start overlay, which also satisfies the browser's
+            // "must start audio from a user gesture" requirement.
+            webView.loadUrl(
+                "https://appassets.androidplatform.net/assets/webretro/index.html" +
+                    "?core=snes9x&rom=game.sfc&nobundle&forcestartbutton"
+            )
+        } catch (t: Throwable) {
+            showFatalError("onCreate", t)
+        }
+    }
+
+    private fun showFatalError(where: String, t: Throwable) {
+        Log.e("MainActivity", "Fatal error in $where", t)
+        val message = "Errore in $where:\n\n${Log.getStackTraceString(t)}"
+        runOnUiThread {
+            val textView = TextView(this).apply {
+                text = message
+                setTextColor(Color.WHITE)
+                setBackgroundColor(Color.BLACK)
+                textSize = 12f
+                setPadding(32, 32, 32, 32)
+                setTextIsSelectable(true)
+            }
+            setContentView(ScrollView(this).apply { addView(textView) })
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -53,6 +81,7 @@ class MainActivity : AppCompatActivity() {
             databaseEnabled = true
             mediaPlaybackRequiresUserGesture = false
             cacheMode = WebSettings.LOAD_DEFAULT
+            setRenderPriority(WebSettings.RenderPriority.HIGH)
         }
 
         webView.webViewClient = object : WebViewClientCompat() {
@@ -61,6 +90,30 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest
             ): WebResourceResponse? {
                 return assetLoader.shouldInterceptRequest(request.url)
+            }
+
+            // CRITICAL: if the WebView's renderer process crashes (e.g. out
+            // of memory loading the WASM core) and this callback is NOT
+            // overridden, Android's default behavior is to kill the whole
+            // app process - which looks exactly like "opens, black screen,
+            // closes immediately". Overriding it and returning true tells
+            // Android "I've handled it, don't kill me" - we show an error
+            // and let the person retry instead of a silent force-close.
+            override fun onRenderProcessGone(
+                view: WebView,
+                detail: RenderProcessGoneDetail
+            ): Boolean {
+                val crashed = detail.didCrash()
+                showFatalError(
+                    "WebView renderer",
+                    RuntimeException(
+                        "Il processo di rendering della WebView e' terminato " +
+                            "(didCrash=$crashed). Probabile causa: memoria insufficiente " +
+                            "per caricare il core WASM su questo dispositivo."
+                    )
+                )
+                view.destroy()
+                return true
             }
         }
     }
@@ -116,6 +169,8 @@ class MainActivity : AppCompatActivity() {
                 document.dispatchEvent(e);
             })();
         """.trimIndent()
-        webView.evaluateJavascript(js, null)
+        if (::webView.isInitialized) {
+            webView.evaluateJavascript(js, null)
+        }
     }
 }
