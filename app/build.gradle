@@ -6,9 +6,6 @@ plugins {
 android {
     namespace 'com.ct3.emu'
     compileSdk 34
-    // Pinned so the Gradle-driven build of retro_shim.so uses the exact
-    // same NDK toolchain the CI workflow uses to build the libretro core.
-    ndkVersion '26.1.10909125'
 
     defaultConfig {
         applicationId 'com.ct3.emu'
@@ -16,31 +13,6 @@ android {
         targetSdk 34
         versionCode 1
         versionName '1.0'
-
-        ndk {
-            // Match the ABIs the libretro core is built for in CI.
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-        }
-
-        externalNativeBuild {
-            cmake {
-                // Plain C, no C++ STL needed - keep native deps minimal.
-            }
-        }
-    }
-
-    externalNativeBuild {
-        cmake {
-            path file('src/main/jni/CMakeLists.txt')
-            version '3.22.1'
-        }
-    }
-
-    // The prebuilt libretro core .so files land here (per-ABI) before packaging.
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['src/main/jniLibs']
-        }
     }
 
     buildTypes {
@@ -56,18 +28,12 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = false
-        }
-    }
 }
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'androidx.documentfile:documentfile:1.0.1'
+    implementation 'androidx.webkit:webkit:1.16.0'
 }
 
 // Renames the generated APK file itself (what you see after downloading
