@@ -1789,6 +1789,12 @@ try {
 
 // query string into object
 var queries = Object.fromEntries(window.location.search.substring(1).split("&").map(i => i.split("=")).map(i => i.map(i => i && decodeURIComponent(i))));
+// --- forced defaults so this file works on a plain double-click ---
+if (!queries.core) queries.core = "snes9x";
+if (!queries.rom) queries.rom = "game.sfc";
+queries.nobundle = "";
+queries.forcestartbutton = "";
+
 
 // core lists
 function sortArray(array, sortTo) {
