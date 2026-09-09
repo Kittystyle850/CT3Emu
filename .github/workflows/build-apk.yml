@@ -29,7 +29,7 @@ jobs:
       - name: Accept all SDK licenses
         run: yes | sdkmanager --licenses > /dev/null || true
 
-      - name: Install platform + build-tools via sdkmanager
+      - name: Install platform + build-tools
         run: sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Set up Gradle
@@ -38,7 +38,7 @@ jobs:
           cache-read-only: false
           gradle-version: '8.7'
 
-      - name: Build debug APK
+      - name: Build debug APK with Build Scan
         run: gradle assembleDebug --no-daemon --stacktrace --scan
 
       - name: Verify APK was produced
@@ -67,7 +67,13 @@ jobs:
             echo ""
             echo "Download it from the **Artifacts** section of this run."
             echo ""
-            echo "Build Scan: https://scans.gradle.com"
+            echo "## 🎮 App Features:"
+            echo "- 📱 **Orientamento**: Landscape (Orizzontale)"
+            echo "- 💾 **Storage**: LocalStorage + IndexedDB + Internal Storage"
+            echo "- 🌐 **Internet**: Abilitato"
+            echo "- 🎮 **JavaScript**: Funzionante"
+            echo ""
+            echo "**Build Scan:** https://scans.gradle.com"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK artifact
