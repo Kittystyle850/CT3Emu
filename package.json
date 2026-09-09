@@ -1,0 +1,14 @@
+{
+  "name": "ct3emu",
+  "version": "1.0.0",
+  "description": "Captain Tsubasa III Emulator",
+  "main": "index.js",
+  "scripts": {
+    "build": "cordova build android --release",
+    "build-debug": "cordova build android"
+  },
+  "dependencies": {
+    "cordova": "^12.0.0",
+    "cordova-android": "^13.0.0"
+  }
+}
