@@ -5,8 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch: {}
 
-# If you push twice quickly, cancel the older run instead of wasting minutes
-# building an APK you're about to replace anyway.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -20,34 +18,28 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK (cmdline-tools, platform, build-tools)
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # Belt-and-braces: accept licenses explicitly even though the action
-      # above normally does it, so a future action-version change can't
-      # silently break the build on a license prompt.
       - name: Accept all SDK licenses
         run: yes | sdkmanager --licenses > /dev/null || true
 
       - name: Install platform + build-tools via sdkmanager
         run: sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Set up Gradle (with dependency + build cache)
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-          # Pinned to match AGP 8.5.2's supported range. Without this,
-          # setup-gradle installs whatever the latest Gradle release is
-          # (it grabbed 9.7.1 once), which AGP 8.5.2 does not support.
           gradle-version: '8.7'
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace --scan
 
       - name: Verify APK was produced
         id: verify_apk
@@ -74,6 +66,8 @@ jobs:
             echo "| Size | ${{ steps.verify_apk.outputs.apk_size }} |"
             echo ""
             echo "Download it from the **Artifacts** section of this run."
+            echo ""
+            echo "Build Scan: https://scans.gradle.com"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK artifact
