@@ -1028,7 +1028,67 @@ body {
 		
 		<link rel="canonical" href="https://binbashbanana.github.io/webretro/">
 		<link rel="dns-prefetch" href="https://cdn.jsdelivr.net/">
-	</head>
+	<style>
+
+#ct3-touch-overlay { position: fixed; inset: 0; z-index: 99999; pointer-events: none; display: none; }
+#ct3-touch-overlay.active { display: block; }
+#ct3-touch-overlay button {
+    position: absolute; pointer-events: auto; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.6); background: rgba(255,255,255,0.25);
+    color: #fff; font: bold 16px sans-serif; -webkit-user-select: none; user-select: none;
+    touch-action: none; box-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+#ct3-touch-overlay button.sys {
+    border-radius: 8px; background: rgba(60,60,60,0.45); font-size: 10px;
+}
+#ct3-touch-overlay button:active { background: rgba(255,255,255,0.5); }
+#ct3-touch-overlay .dpad { width: 56px; height: 56px; }
+#ct3-touch-overlay #ct3-up    { left: 78px;  bottom: 132px; }
+#ct3-touch-overlay #ct3-down  { left: 78px;  bottom: 20px; }
+#ct3-touch-overlay #ct3-left  { left: 20px;  bottom: 76px; }
+#ct3-touch-overlay #ct3-right { left: 136px; bottom: 76px; }
+#ct3-touch-overlay .action { width: 56px; height: 56px; }
+#ct3-touch-overlay #ct3-x { right: 78px;  bottom: 132px; }
+#ct3-touch-overlay #ct3-b { right: 78px;  bottom: 20px; }
+#ct3-touch-overlay #ct3-y { right: 136px; bottom: 76px; }
+#ct3-touch-overlay #ct3-a { right: 20px;  bottom: 76px; }
+
+/* Top area: two clean rows, both starting well below webretro's own
+   45px menu bar, so nothing ever overlaps Menu/Pause. */
+#ct3-touch-overlay #ct3-l { left: 12px;  top: 56px; width: 72px; height: 40px; }
+#ct3-touch-overlay #ct3-r { right: 12px; top: 56px; width: 72px; height: 40px; }
+#ct3-touch-overlay #ct3-select { left: 50%; margin-left: -86px; top: 56px; width: 76px; height: 32px; }
+#ct3-touch-overlay #ct3-start  { left: 50%; margin-left: 10px;  top: 56px; width: 76px; height: 32px; }
+#ct3-touch-overlay #ct3-save { left: 12px;  top: 104px; width: 64px; height: 30px; }
+#ct3-touch-overlay #ct3-load { right: 12px; top: 104px; width: 64px; height: 30px; }
+
+#ct3-touch-toggle {
+    position: fixed; z-index: 100000; left: 50%; bottom: 6px; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 6px; font: 11px sans-serif; padding: 4px 10px; pointer-events: auto;
+}
+
+
+@media screen and (orientation: portrait) {
+    html.ct3-force-landscape {
+        width: 100vh;
+        height: 100vw;
+        overflow: hidden;
+    }
+    html.ct3-force-landscape body {
+        transform: rotate(90deg);
+        transform-origin: top left;
+        width: 100vh;
+        height: 100vw;
+        position: absolute;
+        top: 0;
+        left: 100%;
+        overflow: hidden;
+    }
+}
+
+</style>
+</head>
 	<body>
 		<div class="main" id="mainarea">
 			<div id="menubar">
@@ -3716,5 +3776,106 @@ var Module = {
 };
 
 </script>
-	</body>
+	
+<button id="ct3-touch-toggle" type="button">Mostra pad touch</button>
+<div id="ct3-touch-overlay">
+    <button class="dpad" id="ct3-up">&#9650;</button>
+    <button class="dpad" id="ct3-down">&#9660;</button>
+    <button class="dpad" id="ct3-left">&#9664;</button>
+    <button class="dpad" id="ct3-right">&#9654;</button>
+    <button class="action" id="ct3-x">X</button>
+    <button class="action" id="ct3-b">B</button>
+    <button class="action" id="ct3-y">Y</button>
+    <button class="action" id="ct3-a">A</button>
+    <button class="sys" id="ct3-l">L</button>
+    <button class="sys" id="ct3-r">R</button>
+    <button class="sys" id="ct3-select">SELECT</button>
+    <button class="sys" id="ct3-start">START</button>
+    <button class="sys" id="ct3-save">SALVA</button>
+    <button class="sys" id="ct3-load">CARICA</button>
+</div>
+<script>
+
+(function() {
+    var touchSignal = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    var coarseSignal = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var uaSignal = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(navigator.userAgent || navigator.vendor || window.opera || '');
+    var signalCount = (touchSignal ? 1 : 0) + (coarseSignal ? 1 : 0) + (uaSignal ? 1 : 0);
+    window.CT3_IS_MOBILE = signalCount >= 2;
+
+    if (!window.CT3_IS_MOBILE) return;
+
+    // Layer 1: real orientation lock, best-effort (silently ignored if
+    // unsupported/rejected - the CSS fallback below covers that case).
+    function tryLockLandscape() {
+        try {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(function(){});
+            } else if (screen.lockOrientation) {
+                screen.lockOrientation('landscape');
+            }
+        } catch (e) { /* ignore - CSS fallback handles it */ }
+    }
+    tryLockLandscape();
+    document.addEventListener('click', tryLockLandscape, { once: true });
+
+    // Layer 2: CSS rotation fallback, always applied on mobile regardless
+    // of whether the Lock API above worked.
+    document.documentElement.classList.add('ct3-force-landscape');
+})();
+
+
+(function() {
+    var KEYS = {
+        'ct3-up': {code:'ArrowUp', keyCode:38}, 'ct3-down': {code:'ArrowDown', keyCode:40},
+        'ct3-left': {code:'ArrowLeft', keyCode:37}, 'ct3-right': {code:'ArrowRight', keyCode:39},
+        'ct3-a': {code:'KeyH', keyCode:72}, 'ct3-b': {code:'KeyG', keyCode:71},
+        'ct3-x': {code:'KeyY', keyCode:89}, 'ct3-y': {code:'KeyT', keyCode:84},
+        'ct3-l': {code:'KeyE', keyCode:69}, 'ct3-r': {code:'KeyP', keyCode:80},
+        'ct3-start': {code:'Enter', keyCode:13}, 'ct3-select': {code:'Space', keyCode:32},
+        'ct3-save': {code:'F2', keyCode:113}, 'ct3-load': {code:'F3', keyCode:114}
+    };
+
+    function dispatchKey(codeInfo, down) {
+        var evt = new KeyboardEvent(down ? 'keydown' : 'keyup', {
+            code: codeInfo.code, keyCode: codeInfo.keyCode, which: codeInfo.keyCode,
+            bubbles: true, cancelable: true
+        });
+        document.dispatchEvent(evt);
+    }
+
+    function wire() {
+        Object.keys(KEYS).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var info = KEYS[id];
+            el.addEventListener('touchstart', function(e){ e.preventDefault(); dispatchKey(info, true); }, {passive:false});
+            el.addEventListener('touchend', function(e){ e.preventDefault(); dispatchKey(info, false); }, {passive:false});
+            el.addEventListener('mousedown', function(e){ e.preventDefault(); dispatchKey(info, true); });
+            el.addEventListener('mouseup', function(e){ e.preventDefault(); dispatchKey(info, false); });
+        });
+
+        var overlay = document.getElementById('ct3-touch-overlay');
+        var toggle = document.getElementById('ct3-touch-toggle');
+        // window.CT3_IS_MOBILE is set by landscape_lock.py's detection,
+        // which combines several signals for robustness (see there).
+        if (window.CT3_IS_MOBILE) {
+            overlay.classList.add('active');
+            toggle.textContent = 'Nascondi pad touch';
+        }
+        toggle.addEventListener('click', function() {
+            overlay.classList.toggle('active');
+            toggle.textContent = overlay.classList.contains('active') ? 'Nascondi pad touch' : 'Mostra pad touch';
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wire);
+    } else {
+        wire();
+    }
+})();
+
+</script>
+</body>
 </html>
