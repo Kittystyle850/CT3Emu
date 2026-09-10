@@ -2091,8 +2091,12 @@ function removeStatus(message) {
 // adjust canvas size to window
 function adjustCanvasSize() {
 	var dpi = window.devicePixelRatio || 1;
-	var width = window.innerWidth * dpi;
-	var height = (window.innerHeight * dpi) - (actualMenuHeight * dpi);
+	var rotated = document.documentElement.classList.contains("ct3-force-landscape")
+		&& window.matchMedia("(orientation: portrait)").matches;
+	var rawWidth = rotated ? window.innerHeight : window.innerWidth;
+	var rawHeight = rotated ? window.innerWidth : window.innerHeight;
+	var width = rawWidth * dpi;
+	var height = (rawHeight * dpi) - (actualMenuHeight * dpi);
 	if (Module && Module.setCanvasSize) {
 		Module.setCanvasSize(width, height);
 	} else {
@@ -3822,6 +3826,16 @@ var Module = {
     // Layer 2: CSS rotation fallback, always applied on mobile regardless
     // of whether the Lock API above worked.
     document.documentElement.classList.add('ct3-force-landscape');
+
+    // adjustCanvasSize() (patched in base.js) only recalculates on load or
+    // on a real "resize" event - adding a CSS class triggers neither, so
+    // the canvas would stay sized for the pre-rotation dimensions unless
+    // we explicitly ask it to recompute now, and again once layout has
+    // settled a moment later as a safety net.
+    function recalc() { if (window.adjustCanvasSize) window.adjustCanvasSize(); }
+    recalc();
+    setTimeout(recalc, 200);
+    window.addEventListener('orientationchange', function() { setTimeout(recalc, 200); });
 })();
 
 
