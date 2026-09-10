@@ -3,7 +3,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 		<meta name="color-scheme" content="dark light">
 		<meta name="theme-color" content="#333333">
 		<title>webretro</title>
@@ -1030,61 +1030,115 @@ body {
 		<link rel="dns-prefetch" href="https://cdn.jsdelivr.net/">
 	<style>
 
-#ct3-touch-overlay { position: fixed; inset: 0; z-index: 99999; pointer-events: none; display: none; }
+/* Captain Tsubasa III responsive touch UI */
+#mainarea {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, #17233d 0%, #070a12 48%, #020306 100%);
+}
+#canvas, #canvasmask {
+    width: 100%;
+    max-width: 100%;
+}
+
+#menubar {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+
+#ct3-touch-overlay {
+    --ct3-edge: clamp(10px, 2.8vw, 34px);
+    --ct3-gap: clamp(8px, 1.8vw, 18px);
+    --ct3-dpad: clamp(48px, 9vw, 76px);
+    --ct3-action: clamp(48px, 9vw, 76px);
+    --ct3-sys-w: clamp(58px, 8vw, 92px);
+    --ct3-sys-h: clamp(32px, 5.2vh, 48px);
+    --ct3-top: calc(clamp(52px, 8vh, 82px) + env(safe-area-inset-top));
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    display: none;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 #ct3-touch-overlay.active { display: block; }
 #ct3-touch-overlay button {
-    position: absolute; pointer-events: auto; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.6); background: rgba(255,255,255,0.25);
-    color: #fff; font: bold 16px sans-serif; -webkit-user-select: none; user-select: none;
-    touch-action: none; box-shadow: 0 0 6px rgba(0,0,0,0.4);
+    position: absolute;
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
+    border: 1px solid rgba(255,255,255,.22);
+    color: #fff;
+    font: 800 clamp(14px, 2.5vw, 21px)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    background: linear-gradient(145deg, rgba(255,255,255,.20), rgba(255,255,255,.065));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 10px 28px rgba(0,0,0,.28);
+    transition: transform .08s ease, background .08s ease, box-shadow .08s ease;
 }
+#ct3-touch-overlay button:active {
+    transform: scale(.94);
+    background: linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.12));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 5px 16px rgba(0,0,0,.22);
+}
+#ct3-touch-overlay button.dpad,
+#ct3-touch-overlay button.action {
+    width: var(--ct3-dpad);
+    height: var(--ct3-dpad);
+    border-radius: 24%;
+}
+#ct3-touch-overlay .action { width: var(--ct3-action); height: var(--ct3-action); }
+#ct3-touch-overlay .dpad {
+    border-radius: 20%;
+    background: linear-gradient(145deg, rgba(60,80,120,.55), rgba(20,28,48,.72));
+}
+#ct3-touch-overlay #ct3-up    { left: calc(var(--ct3-edge) + var(--ct3-dpad)); bottom: calc(var(--ct3-edge) + var(--ct3-dpad) + 10px + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-down  { left: calc(var(--ct3-edge) + var(--ct3-dpad)); bottom: calc(var(--ct3-edge) + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-left  { left: var(--ct3-edge); bottom: calc(var(--ct3-edge) + var(--ct3-dpad)/2 + 5px + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-right { left: calc(var(--ct3-edge) + 2 * var(--ct3-dpad)); bottom: calc(var(--ct3-edge) + var(--ct3-dpad)/2 + 5px + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-x { right: calc(var(--ct3-edge) + var(--ct3-action)); bottom: calc(var(--ct3-edge) + var(--ct3-action) + 10px + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-b { right: calc(var(--ct3-edge) + var(--ct3-action)); bottom: calc(var(--ct3-edge) + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-y { right: var(--ct3-edge); bottom: calc(var(--ct3-edge) + var(--ct3-action)/2 + 5px + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-a { right: calc(var(--ct3-edge) + 2 * var(--ct3-action)); bottom: calc(var(--ct3-edge) + var(--ct3-action)/2 + 5px + env(safe-area-inset-bottom)); }
+
 #ct3-touch-overlay button.sys {
-    border-radius: 8px; background: rgba(60,60,60,0.45); font-size: 10px;
+    width: var(--ct3-sys-w);
+    height: var(--ct3-sys-h);
+    border-radius: 999px;
+    background: rgba(9,13,23,.72);
+    color: rgba(255,255,255,.92);
+    font-size: clamp(10px, 1.7vw, 14px);
+    letter-spacing: .08em;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.25);
 }
-#ct3-touch-overlay button:active { background: rgba(255,255,255,0.5); }
-#ct3-touch-overlay .dpad { width: 56px; height: 56px; }
-#ct3-touch-overlay #ct3-up    { left: 78px;  bottom: 132px; }
-#ct3-touch-overlay #ct3-down  { left: 78px;  bottom: 20px; }
-#ct3-touch-overlay #ct3-left  { left: 20px;  bottom: 76px; }
-#ct3-touch-overlay #ct3-right { left: 136px; bottom: 76px; }
-#ct3-touch-overlay .action { width: 56px; height: 56px; }
-#ct3-touch-overlay #ct3-x { right: 78px;  bottom: 132px; }
-#ct3-touch-overlay #ct3-b { right: 78px;  bottom: 20px; }
-#ct3-touch-overlay #ct3-y { right: 136px; bottom: 76px; }
-#ct3-touch-overlay #ct3-a { right: 20px;  bottom: 76px; }
+#ct3-touch-overlay #ct3-l { left: var(--ct3-edge); top: var(--ct3-top); }
+#ct3-touch-overlay #ct3-select { left: calc(var(--ct3-edge) + var(--ct3-sys-w) + var(--ct3-gap)); top: var(--ct3-top); }
+#ct3-touch-overlay #ct3-start { right: calc(var(--ct3-edge) + var(--ct3-sys-w) + var(--ct3-gap)); top: var(--ct3-top); }
+#ct3-touch-overlay #ct3-r { right: var(--ct3-edge); top: var(--ct3-top); }
+#ct3-touch-overlay #ct3-save { left: var(--ct3-edge); top: calc(var(--ct3-top) + var(--ct3-sys-h) + 8px); width: clamp(52px, 7vw, 78px); height: clamp(28px, 4vh, 40px); border-radius: 999px; font-size: clamp(9px, 1.5vw, 12px); }
+#ct3-touch-overlay #ct3-load { right: var(--ct3-edge); top: calc(var(--ct3-top) + var(--ct3-sys-h) + 8px); width: clamp(52px, 7vw, 78px); height: clamp(28px, 4vh, 40px); border-radius: 999px; font-size: clamp(9px, 1.5vw, 12px); }
 
-/* Top area: two clean rows, both starting well below webretro's own
-   45px menu bar, so nothing ever overlaps Menu/Pause. */
-#ct3-touch-overlay #ct3-l { left: 12px;  top: 56px; width: 72px; height: 40px; }
-#ct3-touch-overlay #ct3-r { right: 12px; top: 56px; width: 72px; height: 40px; }
-#ct3-touch-overlay #ct3-select { left: 50%; margin-left: -86px; top: 56px; width: 76px; height: 32px; }
-#ct3-touch-overlay #ct3-start  { left: 50%; margin-left: 10px;  top: 56px; width: 76px; height: 32px; }
-#ct3-touch-overlay #ct3-save { left: 12px;  top: 104px; width: 64px; height: 30px; }
-#ct3-touch-overlay #ct3-load { right: 12px; top: 104px; width: 64px; height: 30px; }
-
-#ct3-touch-toggle {
-    position: fixed; z-index: 100000; left: 50%; bottom: 6px; transform: translateX(-50%);
-    background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.5);
-    border-radius: 6px; font: 11px sans-serif; padding: 4px 10px; pointer-events: auto;
+@media (max-width: 560px) {
+    #ct3-touch-overlay {
+        --ct3-edge: max(8px, 2.5vw);
+        --ct3-gap: 6px;
+        --ct3-dpad: clamp(46px, 14vw, 64px);
+        --ct3-action: clamp(46px, 14vw, 64px);
+        --ct3-sys-w: clamp(54px, 17vw, 74px);
+        --ct3-sys-h: clamp(30px, 5vh, 40px);
+    }
 }
-
-
-@media screen and (orientation: portrait) {
-    html.ct3-force-landscape {
-        width: 100vh;
-        height: 100vw;
-        overflow: hidden;
+@media (max-height: 560px) {
+    #ct3-touch-overlay {
+        --ct3-top: calc(46px + env(safe-area-inset-top));
     }
-    html.ct3-force-landscape body {
-        transform: rotate(90deg);
-        transform-origin: top left;
-        width: 100vh;
-        height: 100vw;
-        position: absolute;
-        top: 0;
-        left: 100%;
-        overflow: hidden;
-    }
+}
+@media (prefers-reduced-motion: reduce) {
+    #ct3-touch-overlay button { transition: none; }
 }
 
 </style>
@@ -2090,13 +2144,11 @@ function removeStatus(message) {
 
 // adjust canvas size to window
 function adjustCanvasSize() {
-	var dpi = window.devicePixelRatio || 1;
-	var rotated = document.documentElement.classList.contains("ct3-force-landscape")
-		&& window.matchMedia("(orientation: portrait)").matches;
-	var rawWidth = rotated ? window.innerHeight : window.innerWidth;
-	var rawHeight = rotated ? window.innerWidth : window.innerHeight;
-	var width = rawWidth * dpi;
-	var height = (rawHeight * dpi) - (actualMenuHeight * dpi);
+	var dpi = Math.min(window.devicePixelRatio || 1, 3);
+	var rawWidth = Math.max(1, window.innerWidth);
+	var rawHeight = Math.max(1, window.innerHeight - actualMenuHeight);
+	var width = Math.round(rawWidth * dpi);
+	var height = Math.round(rawHeight * dpi);
 	if (Module && Module.setCanvasSize) {
 		Module.setCanvasSize(width, height);
 	} else {
@@ -2105,6 +2157,7 @@ function adjustCanvasSize() {
 	}
 }
 window.addEventListener("resize", adjustCanvasSize, false);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", adjustCanvasSize, false);
 adjustCanvasSize();
 
 // emscripten is stupid and removes css width and height properties from the canvas - https://github.com/emscripten-core/emscripten/issues/6353
@@ -2115,9 +2168,9 @@ function canvasCssWorkaround(css) {
 
 // adjust the menu bar height
 function adjustActualMenuHeight() {
-	canvasCssWorkaround("top: " + actualMenuHeight + "px; height: calc(100vh - " + actualMenuHeight + "px);");
+	canvasCssWorkaround("top: " + actualMenuHeight + "px; height: calc(100dvh - " + actualMenuHeight + "px);");
 	canvasMask.style.top = "" + actualMenuHeight + "px";
-	canvasMask.style.height = "calc(100vh - " + actualMenuHeight + "px)";
+	canvasMask.style.height = "calc(100dvh - " + actualMenuHeight + "px)";
 	
 	menuBar.style.height = "" + actualMenuHeight + "px";
 	
@@ -3781,7 +3834,6 @@ var Module = {
 
 </script>
 	
-<button id="ct3-touch-toggle" type="button">Mostra pad touch</button>
 <div id="ct3-touch-overlay">
     <button class="dpad" id="ct3-up">&#9650;</button>
     <button class="dpad" id="ct3-down">&#9660;</button>
@@ -3803,39 +3855,10 @@ var Module = {
 (function() {
     var touchSignal = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     var coarseSignal = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    var uaSignal = /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(navigator.userAgent || navigator.vendor || window.opera || '');
-    var signalCount = (touchSignal ? 1 : 0) + (coarseSignal ? 1 : 0) + (uaSignal ? 1 : 0);
-    window.CT3_IS_MOBILE = signalCount >= 2;
-
-    if (!window.CT3_IS_MOBILE) return;
-
-    // Layer 1: real orientation lock, best-effort (silently ignored if
-    // unsupported/rejected - the CSS fallback below covers that case).
-    function tryLockLandscape() {
-        try {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(function(){});
-            } else if (screen.lockOrientation) {
-                screen.lockOrientation('landscape');
-            }
-        } catch (e) { /* ignore - CSS fallback handles it */ }
-    }
-    tryLockLandscape();
-    document.addEventListener('click', tryLockLandscape, { once: true });
-
-    // Layer 2: CSS rotation fallback, always applied on mobile regardless
-    // of whether the Lock API above worked.
-    document.documentElement.classList.add('ct3-force-landscape');
-
-    // adjustCanvasSize() (patched in base.js) only recalculates on load or
-    // on a real "resize" event - adding a CSS class triggers neither, so
-    // the canvas would stay sized for the pre-rotation dimensions unless
-    // we explicitly ask it to recompute now, and again once layout has
-    // settled a moment later as a safety net.
-    function recalc() { if (window.adjustCanvasSize) window.adjustCanvasSize(); }
-    recalc();
-    setTimeout(recalc, 200);
-    window.addEventListener('orientationchange', function() { setTimeout(recalc, 200); });
+    var smallViewport = Math.min(window.innerWidth, window.innerHeight) <= 1100;
+    var tabletOrPhoneUA = /android|ipad|iphone|ipod|mobile|tablet|silk|kindle|playbook/i.test(navigator.userAgent || '');
+    // Show the virtual pad automatically on touch-first devices. No orientation lock.
+    window.CT3_IS_MOBILE = touchSignal && (coarseSignal || smallViewport || tabletOrPhoneUA);
 })();
 
 
@@ -3870,17 +3893,7 @@ var Module = {
         });
 
         var overlay = document.getElementById('ct3-touch-overlay');
-        var toggle = document.getElementById('ct3-touch-toggle');
-        // window.CT3_IS_MOBILE is set by landscape_lock.py's detection,
-        // which combines several signals for robustness (see there).
-        if (window.CT3_IS_MOBILE) {
-            overlay.classList.add('active');
-            toggle.textContent = 'Nascondi pad touch';
-        }
-        toggle.addEventListener('click', function() {
-            overlay.classList.toggle('active');
-            toggle.textContent = overlay.classList.contains('active') ? 'Nascondi pad touch' : 'Mostra pad touch';
-        });
+        if (window.CT3_IS_MOBILE) overlay.classList.add('active');
     }
 
     if (document.readyState === 'loading') {
