@@ -3892,6 +3892,20 @@ var Module = {
 // and our own virtual Start button trigger it, once, the first time.
 (function() {
     var didRequest = false;
+
+    // Hides the top menu bar the exact same way a real tap on its own
+    // arrow/label would (label[for="menuhider"] toggles the #menuhider
+    // checkbox, which drives the show/hide via CSS) - calling .click() on
+    // it reuses the site's own existing toggle logic instead of us trying
+    // to guess/replicate the show/hide CSS rules ourselves.
+    function hideMenuBar() {
+        var label = document.querySelector('label[for="menuhider"]');
+        var checkbox = document.getElementById('menuhider');
+        if (label && checkbox && !checkbox.checked) {
+            label.click();
+        }
+    }
+
     function requestFullscreenOnce() {
         if (didRequest) return;
         didRequest = true;
@@ -3899,7 +3913,21 @@ var Module = {
         var request = el.requestFullscreen || el.webkitRequestFullscreen
             || el.mozRequestFullScreen || el.msRequestFullscreen;
         if (request) {
-            try { request.call(el); } catch (e) { /* ignore - not critical */ }
+            try {
+                var result = request.call(el);
+                // requestFullscreen() returns a Promise in modern browsers;
+                // wait for it (or its failure) before hiding the menu, so
+                // the two visual changes don't fight each other mid-transition.
+                if (result && result.then) {
+                    result.then(hideMenuBar).catch(hideMenuBar);
+                } else {
+                    setTimeout(hideMenuBar, 150);
+                }
+            } catch (e) {
+                hideMenuBar();
+            }
+        } else {
+            hideMenuBar();
         }
     }
     function wireFullscreenTrigger() {
