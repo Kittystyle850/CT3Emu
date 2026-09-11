@@ -1050,11 +1050,16 @@ body {
 }
 
 #ct3-touch-overlay {
-    --ct3-edge: clamp(12px, 3vw, 36px);
-    --ct3-dpad: clamp(50px, 9.5vw, 78px);
-    --ct3-action: clamp(52px, 10vw, 82px);
-    --ct3-start-w: clamp(72px, 11vw, 108px);
-    --ct3-start-h: clamp(34px, 5.4vh, 46px);
+    /* vmin-based sizing scales consistently whichever dimension (width or
+       height) is the tighter constraint - so the same numbers work well
+       in portrait (height-generous, width-tight) and landscape (the
+       opposite), without separate per-orientation rule sets. */
+    --ct3-edge: clamp(10px, 3vmin, 28px);
+    --ct3-stick: clamp(104px, 26vmin, 156px);
+    --ct3-nub: calc(var(--ct3-stick) * 0.46);
+    --ct3-action: clamp(48px, 11vmin, 74px);
+    --ct3-start-w: clamp(64px, 15vmin, 92px);
+    --ct3-start-h: clamp(30px, 6.5vmin, 40px);
     position: fixed;
     inset: 0;
     z-index: 99999;
@@ -1070,7 +1075,7 @@ body {
     pointer-events: auto;
     border: 1px solid rgba(255,255,255,.22);
     color: #fff;
-    font: 800 clamp(15px, 2.6vw, 22px)/1 Inter, ui-sans-serif, system-ui, sans-serif;
+    font: 800 clamp(15px, 4.5vmin, 22px)/1 Inter, ui-sans-serif, system-ui, sans-serif;
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
@@ -1084,19 +1089,38 @@ body {
     box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 5px 16px rgba(0,0,0,.22);
 }
 
-/* D-pad, bottom-left */
-#ct3-touch-overlay .dpad {
-    width: var(--ct3-dpad);
-    height: var(--ct3-dpad);
-    border-radius: 20%;
-    background: linear-gradient(145deg, rgba(60,80,120,.55), rgba(20,28,48,.72));
+/* Analog stick, bottom-left - a draggable base+nub pair, 360-degree
+   input, replacing the old 4-button D-pad for finer control. */
+#ct3-touch-overlay #ct3-stick-base {
+    position: absolute;
+    left: var(--ct3-edge);
+    bottom: calc(var(--ct3-edge) + env(safe-area-inset-bottom));
+    width: var(--ct3-stick);
+    height: var(--ct3-stick);
+    border-radius: 50%;
+    pointer-events: auto;
+    touch-action: none;
+    background: radial-gradient(circle at 35% 30%, rgba(90,110,150,.35), rgba(15,20,34,.55) 70%);
+    border: 1px solid rgba(255,255,255,.20);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,.45), 0 10px 24px rgba(0,0,0,.25);
 }
-#ct3-touch-overlay #ct3-up    { left: calc(var(--ct3-edge) + var(--ct3-dpad)); bottom: calc(var(--ct3-edge) + var(--ct3-dpad) + 10px + env(safe-area-inset-bottom)); }
-#ct3-touch-overlay #ct3-down  { left: calc(var(--ct3-edge) + var(--ct3-dpad)); bottom: calc(var(--ct3-edge) + env(safe-area-inset-bottom)); }
-#ct3-touch-overlay #ct3-left  { left: var(--ct3-edge); bottom: calc(var(--ct3-edge) + var(--ct3-dpad)/2 + 5px + env(safe-area-inset-bottom)); }
-#ct3-touch-overlay #ct3-right { left: calc(var(--ct3-edge) + 2 * var(--ct3-dpad)); bottom: calc(var(--ct3-edge) + var(--ct3-dpad)/2 + 5px + env(safe-area-inset-bottom)); }
+#ct3-touch-overlay #ct3-stick-nub {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: var(--ct3-nub);
+    height: var(--ct3-nub);
+    margin-left: calc(var(--ct3-nub) / -2);
+    margin-top: calc(var(--ct3-nub) / -2);
+    border-radius: 50%;
+    pointer-events: none;
+    background: linear-gradient(145deg, rgba(255,255,255,.55), rgba(180,195,220,.25));
+    border: 1px solid rgba(255,255,255,.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+    transition: transform .05s linear;
+}
+#ct3-touch-overlay #ct3-stick-base.held #ct3-stick-nub { transition: none; }
 
-/* A / B only, bottom-right, classic SNES diagonal pairing */
+/* A / B, bottom-right, classic SNES diagonal pairing */
 #ct3-touch-overlay .action {
     width: var(--ct3-action);
     height: var(--ct3-action);
@@ -1105,33 +1129,23 @@ body {
 #ct3-touch-overlay #ct3-a { right: var(--ct3-edge); bottom: calc(var(--ct3-edge) + var(--ct3-action) * .55 + env(safe-area-inset-bottom)); }
 #ct3-touch-overlay #ct3-b { right: calc(var(--ct3-edge) + var(--ct3-action) * .95); bottom: calc(var(--ct3-edge) + env(safe-area-inset-bottom)); }
 
-/* Start, bottom-center - out of the way of both thumbs */
+/* Start, top-left - well clear of the D-pad/action cluster, below
+   webretro's own 45px menu bar. */
 #ct3-touch-overlay #ct3-start {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(var(--ct3-edge) + env(safe-area-inset-bottom));
+    left: var(--ct3-edge);
+    top: calc(52px + env(safe-area-inset-top));
     width: var(--ct3-start-w);
     height: var(--ct3-start-h);
     border-radius: 999px;
     background: rgba(9,13,23,.72);
     color: rgba(255,255,255,.92);
-    font-size: clamp(11px, 1.8vw, 15px);
-    letter-spacing: .08em;
+    font-size: clamp(10px, 3vmin, 14px);
+    letter-spacing: .06em;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.25);
 }
-#ct3-touch-overlay #ct3-start:active { transform: translateX(-50%) scale(.94); }
 
-@media (max-width: 560px) {
-    #ct3-touch-overlay {
-        --ct3-edge: max(10px, 2.8vw);
-        --ct3-dpad: clamp(48px, 15vw, 66px);
-        --ct3-action: clamp(50px, 16vw, 70px);
-        --ct3-start-w: clamp(68px, 20vw, 92px);
-        --ct3-start-h: clamp(32px, 5.4vh, 42px);
-    }
-}
 @media (prefers-reduced-motion: reduce) {
-    #ct3-touch-overlay button { transition: none; }
+    #ct3-touch-overlay button, #ct3-touch-overlay #ct3-stick-nub { transition: none; }
 }
 
 </style>
@@ -1337,7 +1351,7 @@ body {
 				</div>
 			</div>
 			<p id="updatenotice"></p>
-			<input type="button" id="startbutton" value="Start">
+			<input type="button" id="startbutton" value="Play">
 			<div id="loadingdiv">
 				<p class="loadingloading">Loading</p>
 				<p id="loadingtext"></p>
@@ -3828,10 +3842,7 @@ var Module = {
 </script>
 	
 <div id="ct3-touch-overlay">
-    <button class="dpad" id="ct3-up">&#9650;</button>
-    <button class="dpad" id="ct3-down">&#9660;</button>
-    <button class="dpad" id="ct3-left">&#9664;</button>
-    <button class="dpad" id="ct3-right">&#9654;</button>
+    <div id="ct3-stick-base"><div id="ct3-stick-nub"></div></div>
     <button class="action" id="ct3-b">B</button>
     <button class="action" id="ct3-a">A</button>
     <button id="ct3-start">START</button>
@@ -3849,9 +3860,11 @@ var Module = {
 
 
 (function() {
-    var KEYS = {
-        'ct3-up': {code:'ArrowUp', keyCode:38}, 'ct3-down': {code:'ArrowDown', keyCode:40},
-        'ct3-left': {code:'ArrowLeft', keyCode:37}, 'ct3-right': {code:'ArrowRight', keyCode:39},
+    var DIRKEYS = {
+        up: {code:'ArrowUp', keyCode:38}, down: {code:'ArrowDown', keyCode:40},
+        left: {code:'ArrowLeft', keyCode:37}, right: {code:'ArrowRight', keyCode:39}
+    };
+    var BUTTON_KEYS = {
         'ct3-a': {code:'KeyH', keyCode:72}, 'ct3-b': {code:'KeyG', keyCode:71},
         'ct3-start': {code:'Enter', keyCode:13}
     };
@@ -3864,11 +3877,117 @@ var Module = {
         document.dispatchEvent(evt);
     }
 
+    // --- Analog stick: 360-degree drag mapped to the 4 arrow keys. ---
+    // Diagonals hold two keys at once (e.g. up+right), same as pressing
+    // two D-pad buttons together on a real controller. A small dead zone
+    // near the center means "released" (no direction held).
+    function setupStick() {
+        var base = document.getElementById('ct3-stick-base');
+        var nub = document.getElementById('ct3-stick-nub');
+        if (!base || !nub) return;
+
+        var held = {up:false, down:false, left:false, right:false};
+        var activePointerId = null;
+        var DEAD_ZONE_RATIO = 0.22; // fraction of the stick radius
+
+        function setHeld(next) {
+            Object.keys(DIRKEYS).forEach(function(dir) {
+                if (held[dir] !== next[dir]) {
+                    held[dir] = next[dir];
+                    dispatchKey(DIRKEYS[dir], next[dir]);
+                }
+            });
+        }
+
+        function updateFromPoint(clientX, clientY) {
+            var rect = base.getBoundingClientRect();
+            var cx = rect.left + rect.width / 2;
+            var cy = rect.top + rect.height / 2;
+            var dx = clientX - cx;
+            var dy = clientY - cy;
+            var radius = rect.width / 2;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+
+            var clampedDist = Math.min(dist, radius);
+            var angle = Math.atan2(dx, -dy); // 0 = up, clockwise
+            var nubX = Math.sin(angle) * clampedDist;
+            var nubY = -Math.cos(angle) * clampedDist;
+            nub.style.transform = 'translate(' + nubX + 'px, ' + nubY + 'px)';
+
+            if (dist < radius * DEAD_ZONE_RATIO) {
+                setHeld({up:false, down:false, left:false, right:false});
+                return;
+            }
+            var deg = angle * 180 / Math.PI;
+            if (deg < 0) deg += 360;
+            // 8 zones, 45 degrees each, centered on the 8 compass points.
+            var next = {up:false, down:false, left:false, right:false};
+            if (deg >= 337.5 || deg < 22.5)       next.up = true;
+            else if (deg < 67.5)                  { next.up = true; next.right = true; }
+            else if (deg < 112.5)                 next.right = true;
+            else if (deg < 157.5)                 { next.down = true; next.right = true; }
+            else if (deg < 202.5)                 next.down = true;
+            else if (deg < 247.5)                 { next.down = true; next.left = true; }
+            else if (deg < 292.5)                 next.left = true;
+            else                                   { next.up = true; next.left = true; }
+            setHeld(next);
+        }
+
+        function resetStick() {
+            nub.style.transform = 'translate(0px, 0px)';
+            setHeld({up:false, down:false, left:false, right:false});
+            base.classList.remove('held');
+        }
+
+        base.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            var t = e.changedTouches[0];
+            activePointerId = t.identifier;
+            base.classList.add('held');
+            updateFromPoint(t.clientX, t.clientY);
+        }, {passive: false});
+        base.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                var t = e.changedTouches[i];
+                if (t.identifier === activePointerId) { updateFromPoint(t.clientX, t.clientY); break; }
+            }
+        }, {passive: false});
+        function onTouchEnd(e) {
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activePointerId) {
+                    activePointerId = null;
+                    resetStick();
+                    break;
+                }
+            }
+        }
+        base.addEventListener('touchend', onTouchEnd, {passive: true});
+        base.addEventListener('touchcancel', onTouchEnd, {passive: true});
+
+        // Mouse support (desktop testing).
+        var mouseDown = false;
+        base.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            mouseDown = true;
+            base.classList.add('held');
+            updateFromPoint(e.clientX, e.clientY);
+        });
+        window.addEventListener('mousemove', function(e) {
+            if (mouseDown) updateFromPoint(e.clientX, e.clientY);
+        });
+        window.addEventListener('mouseup', function() {
+            if (mouseDown) { mouseDown = false; resetStick(); }
+        });
+    }
+
     function wire() {
-        Object.keys(KEYS).forEach(function(id) {
+        setupStick();
+
+        Object.keys(BUTTON_KEYS).forEach(function(id) {
             var el = document.getElementById(id);
             if (!el) return;
-            var info = KEYS[id];
+            var info = BUTTON_KEYS[id];
             el.addEventListener('touchstart', function(e){ e.preventDefault(); dispatchKey(info, true); }, {passive:false});
             el.addEventListener('touchend', function(e){ e.preventDefault(); dispatchKey(info, false); }, {passive:false});
             el.addEventListener('mousedown', function(e){ e.preventDefault(); dispatchKey(info, true); });
