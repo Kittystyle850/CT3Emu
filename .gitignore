@@ -1,20 +1,32 @@
-*.iml
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Cordova build output
+platforms/
+plugins/
+www/
+
+# Android build
 .gradle/
-/local.properties
+build/
+local.properties
+*.apk
+*.aab
+
+# IDE
 .idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# OS
 .DS_Store
-/build/
-/app/build/
-/captures/
-.externalNativeBuild/
-.cxx/
+Thumbs.db
 
-# Never commit ROMs by accident anywhere else in the project...
-*.smc
-*.sfc
-*.fig
-*.swc
-
-# ...except the one we deliberately bundle into the app (private repo only -
-# see README). Git needs the negation listed after the broader *.sfc rule.
-!app/src/main/assets/webretro/roms/*.sfc
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
