@@ -1,0 +1,15 @@
+{
+  "name": "ct3emu",
+  "version": "1.0.0",
+  "description": "Captain Tsubasa III Emulator - self-contained Cordova app",
+  "private": true,
+  "scripts": {
+    "build:android": "cordova build android --debug",
+    "build:android:release": "cordova build android --release",
+    "prepare": "cordova platform add android"
+  },
+  "devDependencies": {
+    "cordova": "12.0.0",
+    "cordova-android": "13.0.0"
+  }
+}
