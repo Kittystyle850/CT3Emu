@@ -5,9 +5,12 @@
   "main": "index.js",
   "scripts": {
     "build": "cordova build android --release",
-    "build-debug": "cordova build android"
+    "build-debug": "cordova build android --debug"
   },
-  "dependencies": {
+  "keywords": ["emulator", "retro", "game"],
+  "author": "Kittystyle850",
+  "license": "MIT",
+  "devDependencies": {
     "cordova": "^12.0.0",
     "cordova-android": "^13.0.0"
   }
