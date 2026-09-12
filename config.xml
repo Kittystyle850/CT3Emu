@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.kittystyle850.ct3emu" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>CT3Emu</name>
+    <description>Captain Tsubasa III Emulator - Webretro</description>
+    <author email="support@example.com" href="https://github.com/Kittystyle850/CT3Emu">Kittystyle850</author>
+    
+    <preference name="Orientation" value="landscape" />
+    <preference name="Fullscreen" value="true" />
+    <preference name="ShowTitle" value="false" />
+    <preference name="target-device" value="handset" />
+
+    <content src="index.html" />
+
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+
+    <platform name="android">
+        <allow-intent href="market:*" />
+        <preference name="android:minSdkVersion" value="24" />
+        <preference name="android:targetSdkVersion" value="34" />
+        <preference name="android:hardwareAccelerated" value="true" />
+    </platform>
+</widget>
