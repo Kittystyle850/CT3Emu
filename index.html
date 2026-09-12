@@ -3890,6 +3890,21 @@ var Module = {
         var activePointerId = null;
         var DEAD_ZONE_RATIO = 0.22; // fraction of the stick radius
 
+        // Perf: cache the base's position/size ONCE per drag (on
+        // touchstart/mousedown) instead of calling getBoundingClientRect()
+        // on every touchmove. That call forces a synchronous layout
+        // recalculation, and touchmove can fire dozens of times per
+        // second on a real phone (far more than a mouse-drag test on a
+        // PC would), so doing it per-event was the main cause of lag.
+        var cachedRect = null;
+
+        // Perf: also throttle processing to at most once per animation
+        // frame via requestAnimationFrame, instead of doing full work
+        // (trig + DOM style writes + possible key dispatch) synchronously
+        // for every single touchmove event.
+        var pendingPoint = null;
+        var rafScheduled = false;
+
         function setHeld(next) {
             Object.keys(DIRKEYS).forEach(function(dir) {
                 if (held[dir] !== next[dir]) {
@@ -3899,8 +3914,9 @@ var Module = {
             });
         }
 
-        function updateFromPoint(clientX, clientY) {
-            var rect = base.getBoundingClientRect();
+        function processPoint(clientX, clientY) {
+            var rect = cachedRect;
+            if (!rect) return;
             var cx = rect.left + rect.width / 2;
             var cy = rect.top + rect.height / 2;
             var dx = clientX - cx;
@@ -3933,7 +3949,26 @@ var Module = {
             setHeld(next);
         }
 
+        function updateFromPoint(clientX, clientY) {
+            // Called directly (not throttled) for touchstart/mousedown,
+            // where we also (re)capture the rect for this drag.
+            cachedRect = base.getBoundingClientRect();
+            processPoint(clientX, clientY);
+        }
+
+        function queuePoint(clientX, clientY) {
+            pendingPoint = {x: clientX, y: clientY};
+            if (rafScheduled) return;
+            rafScheduled = true;
+            requestAnimationFrame(function() {
+                rafScheduled = false;
+                if (pendingPoint) processPoint(pendingPoint.x, pendingPoint.y);
+            });
+        }
+
         function resetStick() {
+            pendingPoint = null;
+            cachedRect = null;
             nub.style.transform = 'translate(0px, 0px)';
             setHeld({up:false, down:false, left:false, right:false});
             base.classList.remove('held');
@@ -3950,7 +3985,7 @@ var Module = {
             e.preventDefault();
             for (var i = 0; i < e.changedTouches.length; i++) {
                 var t = e.changedTouches[i];
-                if (t.identifier === activePointerId) { updateFromPoint(t.clientX, t.clientY); break; }
+                if (t.identifier === activePointerId) { queuePoint(t.clientX, t.clientY); break; }
             }
         }, {passive: false});
         function onTouchEnd(e) {
@@ -3974,7 +4009,7 @@ var Module = {
             updateFromPoint(e.clientX, e.clientY);
         });
         window.addEventListener('mousemove', function(e) {
-            if (mouseDown) updateFromPoint(e.clientX, e.clientY);
+            if (mouseDown) queuePoint(e.clientX, e.clientY);
         });
         window.addEventListener('mouseup', function() {
             if (mouseDown) { mouseDown = false; resetStick(); }
@@ -4017,12 +4052,24 @@ var Module = {
     // checkbox, which drives the show/hide via CSS) - calling .click() on
     // it reuses the site's own existing toggle logic instead of us trying
     // to guess/replicate the show/hide CSS rules ourselves.
+    //
+    // IMPORTANT: that checkbox only hides the dropdown *list* inside the
+    // bar (#menu). The bar itself (#menubar) gets a "show" class added by
+    // webretro's own afterStart() and is never removed - and #menubar has
+    // a 14px backdrop-filter blur applied. Since it sits on top of the
+    // game canvas, which redraws every frame, that blur was being
+    // recomputed continuously for the whole play session - a real
+    // performance cost, especially on phone GPUs. We also strip that
+    // "show" class so the bar itself (and its blur) is fully removed from
+    // rendering, not just its contents hidden.
     function hideMenuBar() {
         var label = document.querySelector('label[for="menuhider"]');
         var checkbox = document.getElementById('menuhider');
         if (label && checkbox && !checkbox.checked) {
             label.click();
         }
+        var bar = document.getElementById('menubar');
+        if (bar) bar.classList.remove('show');
     }
 
     function requestFullscreenOnce() {
@@ -4049,12 +4096,37 @@ var Module = {
             hideMenuBar();
         }
     }
+    // Safety net for the timing race above: webretro's own afterStart()
+    // (which runs asynchronously once the emulator has actually finished
+    // booting, possibly well after the Start tap) is what adds the "show"
+    // class in the first place. If that happens after our hideMenuBar()
+    // already ran, the expensive blur would silently come back. This
+    // watches the class attribute and strips "show" the instant it
+    // reappears, removing the race entirely - but is only armed AFTER
+    // Start is pressed, so the menu bar still shows normally before then.
+    var menuBarWatchArmed = false;
+    function armMenuBarWatch() {
+        if (menuBarWatchArmed) return;
+        menuBarWatchArmed = true;
+        var bar = document.getElementById('menubar');
+        if (!bar || !window.MutationObserver) return;
+        new MutationObserver(function() {
+            if (bar.classList.contains('show')) bar.classList.remove('show');
+        }).observe(bar, {attributes: true, attributeFilter: ['class']});
+    }
+
     function wireFullscreenTrigger() {
         ['startbutton', 'ct3-start'].forEach(function(id) {
             var el = document.getElementById(id);
             if (!el) return;
-            el.addEventListener('click', requestFullscreenOnce);
-            el.addEventListener('touchstart', requestFullscreenOnce, {passive: true});
+            el.addEventListener('click', function() {
+                requestFullscreenOnce();
+                armMenuBarWatch();
+            });
+            el.addEventListener('touchstart', function() {
+                requestFullscreenOnce();
+                armMenuBarWatch();
+            }, {passive: true});
         });
     }
     if (document.readyState === 'loading') {
