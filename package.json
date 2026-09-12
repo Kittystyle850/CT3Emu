@@ -5,8 +5,7 @@
   "private": true,
   "scripts": {
     "build:android": "cordova build android --debug",
-    "build:android:release": "cordova build android --release",
-    "prepare": "cordova platform add android"
+    "build:android:release": "cordova build android --release"
   },
   "devDependencies": {
     "cordova": "12.0.0",
