@@ -37,6 +37,26 @@ jobs:
       - name: Install npm dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Ensure Cordova project exists
+        run: |
+          set -euo pipefail
+          # `cordova info` returns non-zero when the current directory is not a Cordova project
+          if ! npx cordova info >/dev/null 2>&1; then
+            echo "Cordova project not detected — creating a minimal Cordova project skeleton"
+            # Create a Cordova project in-place. This may create a few Cordova files but will not overwrite your existing web assets.
+            npx cordova create . com.kittystyle850.ct3emu CT3Emu || true
+            mkdir -p www
+            # Copy existing web assets into the Cordova www folder if they exist
+            if [ -f index.html ]; then
+              cp -n index.html www/ || true
+            fi
+            if [ -d app ]; then
+              cp -rn app/* www/ || true
+            fi
+          else
+            echo "Cordova project detected"
+          fi
+
       - name: Add Cordova Android 13
         run: npx cordova platform add android@13.0.0
 
